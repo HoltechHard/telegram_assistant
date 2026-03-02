@@ -1,0 +1,25 @@
+========================================
+|      CMD INSTRUCTIONS TO RUN APP     |
+========================================
+
+1) Application archiecture
+
+Telegram Group
+      ?
+Telegram Bot (python-telegram-bot)
+      ?
+Your Python Script
+      ?
+LLM API (via API key)
+      ?
+Response back to Telegram
+
+
+2) bot created
+
+name:
+UPN Assistant
+
+username:
+@holger_assistant_bot
+
