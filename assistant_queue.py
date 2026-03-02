@@ -36,20 +36,21 @@ class LLMRequest:
 llm_queue = asyncio.Queue()
 
 
+# worker that processes LLM request sequentially
 async def llm_worker():
-    """
-    Worker that processes LLM requests sequentially.
-    """
+    
     while True:
         request: LLMRequest = await llm_queue.get()
         try:
             # Call the API in a thread (blocking)
-            logging.info(f"Sending request to LLM API: {request.update.message.text}")
+            logging.info(f"USER: {request.update.message.text}")
             llm_result = await asyncio.to_thread(query_llm, request.update.message.text)
             request.future.set_result(llm_result)
+        
         except Exception as e:
             logging.error(f"LLM API error: {e}")
             request.future.set_exception(e)
+        
         finally:
             llm_queue.task_done()
 
@@ -61,10 +62,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
 
-    user_text = update.message.text
+    #user_text = update.message.text
 
     # Send temporary "processing" message
-    processing_msg = await update.message.reply_text("?? Processing your request...")
+    processing_msg = await update.message.reply_markdown("?? Processing your request...")    
 
     # Create a Future for the LLM result
     future = asyncio.get_event_loop().create_future()
@@ -75,8 +76,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         # Wait for LLM API result, with generous timeout
-        llm_response = await asyncio.wait_for(future, timeout=600)  # 10 minutes
-        logging.info(f"Received LLM response for user: {llm_response[:100]}...")
+        llm_response = await asyncio.wait_for(future, timeout=300)  # 5 minutes
+        logging.info(f"BOT: {llm_response[:100]}...")
     except asyncio.TimeoutError:
         await processing_msg.edit_text("?? The model took too long to respond.")
         return
@@ -92,7 +93,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Send the API response to user
     try:
-        await update.message.reply_text(llm_response)
+        await update.message.reply_markdown(llm_response)
     except Exception as e:
         logging.error(f"Telegram send error: {str(e)}")
 
@@ -120,4 +121,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
