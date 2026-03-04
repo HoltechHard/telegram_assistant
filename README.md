@@ -2,10 +2,11 @@
 
 ### Components
 
-- Kimi 2.5 LLM API
-- Python backend
-- Telegram bot: @holger_assistant_bot
-- Queue management
+- Kimi 2.5 LLM API  
+- Python backend  
+- Telegram bot: @holger_assistant_bot  
+- Queue management  
+- JSON database of subscribers and message interactions  
   
 ### Introduction  
   
