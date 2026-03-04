@@ -42,4 +42,10 @@ A sophisticated Telegram bot system designed to manage channel communications wi
 - Handles multiple users simultaneously  
 - Prevents API rate limit issues  
 - Maintains response order  
+    
   
+### System Interaction  
+    
+<img width="412" height="442" alt="image" src="https://github.com/user-attachments/assets/32c6c3e4-f162-4ecf-ade8-4a40516e18b9" />
+
+   
