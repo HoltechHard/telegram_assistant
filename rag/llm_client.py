@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from openai import OpenAI
 
-from config import get_config, BASE_DIR
+from settings.config import get_config, BASE_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class SystemPromptManager:
         Args:
             prompt_path: Optional custom path to the system prompt file
         """
-        self.prompt_path = prompt_path or str(BASE_DIR / "rag" / "instruct.md")
+        self.prompt_path = prompt_path or str(BASE_DIR / "prompts" / "instruct.md")
         self._cached_prompt: Optional[str] = None
     
     def load_prompt(self, force_reload: bool = False) -> str:
@@ -134,8 +134,7 @@ When answering:
 5. Never say "no information" if the context contains relevant data
 
 Format your response in clean Markdown when appropriate.
-"""
-        
+"""        
         messages = [
             {"role": "system", "content": enhanced_prompt}
         ]
@@ -237,9 +236,9 @@ Note: Answer based on your general knowledge, but suggest the user check the cha
             
             # Check if response is empty
             if not content.strip():
-                logger.warning("LLM returned empty content")
+                logger.warning("El LLM devolvio un contenido vacio")
                 return LLMResponse(
-                    content="I apologize, but I couldn't generate a response. Please try asking your question differently.",
+                    content="Mis disculpas, pero no pude generar una respuesta. Por favor, intenta hacer tu pregunta de forma diferente.",
                     model=self.llm_config.model,
                     usage=usage,
                     success=True
