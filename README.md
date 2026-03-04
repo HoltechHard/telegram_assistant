@@ -10,6 +10,12 @@
 ### Introduction  
   
 A sophisticated Telegram bot system designed to manage channel communications with AI-powered question answering, automated broadcasts, and intelligent escalation to human support.  
+
+  
+### System Architecture  
+  
+<img width="1077" height="451" alt="image" src="https://github.com/user-attachments/assets/33b84579-0cb3-4dc0-9130-9a7ef19ae8f6" />
+  
   
 ### Features  
 
