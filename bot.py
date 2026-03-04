@@ -24,20 +24,20 @@ from telegram.ext import (
 )
 from telegram.error import TelegramError
 
-from config import get_config, AppConfig, BASE_DIR
-from channel_context import (
+from settings.config import get_config, AppConfig, BASE_DIR
+from rag.channel_context import (
     init_channel_context_manager,
     get_channel_context_manager,
     ChannelContextManager
 )
 from rag.llm_client import LLMClient, query_llm_with_context, LLMResponse
-from broadcast_manager import BroadcastManager
-from escalation_manager import (
+from handlers.broadcast_manager import BroadcastManager
+from handlers.escalation_manager import (
     EscalationManager,
     create_satisfaction_keyboard,
     parse_satisfaction_callback
 )
-from subscriber_manager import init_subscriber_manager, get_subscriber_manager
+from handlers.subscriber_manager import init_subscriber_manager, get_subscriber_manager
 
 # ---------------------------
 # Logging Configuration
@@ -47,6 +47,24 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
+
+def escape_markdown(text: str) -> str:
+    """
+    Escape special characters for Telegram Markdown V2.
+    Telegram is very strict about what needs to be escaped in V2.
+    """
+    # Characters that must be escaped in MarkdownV2
+    # _ * [ ] ( ) ~ ` > # + - = | { } . !
+    escape_chars = r'_*[]()~`>#+-=|{}.!'
+    # We avoid escaping already escaped characters
+    result = ""
+    for char in text:
+        if char in escape_chars:
+            result += f"\\{char}"
+        else:
+            result += char
+    return result
 
 
 # ---------------------------
@@ -131,7 +149,7 @@ def get_context_for_query() -> str:
     context_manager = get_channel_context_manager()
     if context_manager:
         context_str = context_manager.get_context_string()
-        logger.info(f"?? Context for query: {len(context_str)} chars, {context_manager.get_message_count()} messages")
+        logger.info(f"Context for query: {len(context_str)} chars, {context_manager.get_message_count()} messages")
         return context_str
     
     logger.warning("No channel context manager available!")
@@ -177,24 +195,24 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             broadcast_manager.set_excluded_ids(owner_id=owner_user_id, bot_id=bot_user_id)
         logger.info(f"Owner identified with user_id: {user.id}")
     
-    welcome_message = """?? **Welcome to the Channel Assistant Bot!**
+    welcome_message = """ **Bienvenido al Bot Asistente del Canal!**
 
-I'm here to help answer your questions about the channel content.
+Estoy aqui para ayudarte a responder tus preguntas sobre el contenido del canal.
 
-**How it works:**
-1. Send me any question
-2. I'll search through recent channel messages to provide relevant answers
-3. After my response, you can indicate if it was helpful
+**Como funciona:**
+1. Enviame cualquier pregunta
+2. Buscar en los mensajes recientes del canal para darte respuestas relevantes
+3. Despues de mi respuesta, puedes indicar si fue de ayuda
 
-**Commands:**
-- /start - Show this welcome message
-- /help - Get help information
+**Comandos:**
+- /start - Mostrar este mensaje de bienvenida
+- /help - Obtener informacion de ayuda
 
-?? **Note:** You will receive notifications when the channel owner posts important messages.
+!! **Nota:** Recibiras notificaciones cuando el dueno del canal publique mensajes importantes.
 
-Feel free to ask me anything!"""
+!! No dudes en preguntarme cualquier cosa!"""
     
-    await update.message.reply_markdown(welcome_message)
+    await update.message.reply_markdown_v2(escape_markdown(welcome_message))
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -202,29 +220,29 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
     
-    help_message = """?? **Help Information**
+    help_message = """**Informacion de Ayuda**
 
-**What can I do?**
-I can answer questions based on the recent messages from our Telegram channel.
+**Que puedo hacer?**
+Puedo responder preguntas basadas en los mensajes recientes de nuestro canal de Telegram.
 
-**How to use:**
-- Simply send your question as a message
-- I'll analyze recent channel content to provide relevant answers
-- After receiving my response, click:
-  - ? **YES** if your question was answered satisfactorily
-  - ? **NO** if you need more help (your query will be escalated to the owner)
+**Como usar:**
+- Simplemente envia tu pregunta como un mensaje
+- Analizar el contenido reciente del canal para proporcionar respuestas relevantes
+- Despues de recibir mi respuesta, haz clic en:
+  - **SI** si tu pregunta fue respondida satisfactoriamente
+  - **NO** si necesitas mas ayuda (tu consulta sera escalada al dueno)
 
-**Tips:**
-- Be specific in your questions
-- I have access to messages from the last 24 hours
-- If I can't help, the channel owner will assist you directly
+**Consejos:**
+- Se especifico en tus preguntas
+- Tengo acceso a mensajes de las ultimas 24 horas
+- Si no puedo ayudarte, el dueno del canal te asistira directamente
 
-**Broadcasts:**
-When the channel owner posts important messages, you'll receive a notification after a short delay.
+**Difusiones:**
+Cuando el dueno del canal publica mensajes importantes, recibiras una notificacion despues de un breve retraso.
 
-Need more help? Just ask!"""
+Necesitas mas ayuda? Solo pregunta!"""
     
-    await update.message.reply_markdown(help_message)
+    await update.message.reply_markdown_v2(escape_markdown(help_message))
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -237,7 +255,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Only owner can view stats
     if not is_owner(user.id, user.username, config):
-        await update.message.reply_text("?? This command is only available to the channel owner.")
+        await update.message.reply_text("?? Este comando solo esta disponible para el dueno del canal.")
         return
     
     subscriber_manager = get_subscriber_manager()
@@ -248,19 +266,19 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_count = ctx_manager.get_message_count() if ctx_manager else 0
     recent_messages = ctx_manager.get_recent_messages(5) if ctx_manager else []
     
-    stats_message = f"""?? **Bot Statistics**
+    stats_message = f""" **Estadisticas del Bot**
 
-**Subscribers:** {subscriber_count} active users
-**Channel Messages Stored:** {message_count} messages
+**Suscriptores:** {subscriber_count} usuarios activos
+**Mensajes del Canal Almacenados:** {message_count} mensajes
 
-**Broadcast Status:** {"Running" if broadcast_manager and broadcast_manager._running else "Stopped"}
-**Pending Broadcasts:** {len(broadcast_manager.get_pending_broadcasts()) if broadcast_manager else 0}
-**Completed Broadcasts:** {len(broadcast_manager.get_completed_broadcasts()) if broadcast_manager else 0}
+**Estado de Difusion:** {"En ejecucion" if broadcast_manager and broadcast_manager._running else "Detenido"}
+**Difusiones Pendientes:** {len(broadcast_manager.get_pending_broadcasts()) if broadcast_manager else 0}
+**Difusiones Completadas:** {len(broadcast_manager.get_completed_broadcasts()) if broadcast_manager else 0}
 
-**Context Window:** {config.context.context_hours} hours
+**Ventana de Contexto:** {config.context.context_hours} horas
 """
     
-    await update.message.reply_markdown(stats_message)
+    await update.message.reply_markdown_v2(escape_markdown(stats_message))
 
 
 async def context_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -273,22 +291,22 @@ async def context_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Only owner can view context
     if not is_owner(user.id, user.username, config):
-        await update.message.reply_text("?? This command is only available to the channel owner.")
+        await update.message.reply_text("Este comando solo esta disponible para el dueno del canal.")
         return
     
     ctx_manager = get_channel_context_manager()
     if not ctx_manager:
-        await update.message.reply_text("?? Context manager not initialized.")
+        await update.message.reply_text("**Gestor de contexto no inicializado.**")
         return
     
     messages = ctx_manager.get_recent_messages(10)
     message_count = ctx_manager.get_message_count()
     
     if not messages:
-        await update.message.reply_text("?? No channel messages stored in context.")
+        await update.message.reply_text("**No hay mensajes del canal almacenados en el contexto!**")
         return
-    
-    response = f"?? **Stored Channel Messages ({message_count} total)**\n\n"
+
+    response = f"**Mensajes del Canal Almacenados ({message_count} en total)**\n\n"
     
     for msg in messages:
         date_str = msg.date.strftime("%Y-%m-%d %H:%M")
@@ -299,9 +317,9 @@ async def context_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(response) > 4000:
         chunks = [response[i:i+4000] for i in range(0, len(response), 4000)]
         for chunk in chunks:
-            await update.message.reply_markdown(chunk)
+            await update.message.reply_markdown_v2(escape_markdown(chunk))
     else:
-        await update.message.reply_markdown(response)
+        await update.message.reply_markdown_v2(escape_markdown(response))
 
 
 # ---------------------------
@@ -367,9 +385,9 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
             sender_name="Channel",
             is_owner=True  # Assume all channel posts are from owner
         )
-        logger.info(f"?? Stored channel message {message.message_id} in context")
+        logger.info(f"Mensaje del canal {message.message_id} almacenado en contexto")
     else:
-        logger.warning("Context manager not initialized - message NOT stored!")
+        logger.warning("Gestor de contexto no inicializado - el mensaje NO fue almacenado!")
     
     # ========== SCHEDULE BROADCAST ==========
     if broadcast_manager:
@@ -379,9 +397,9 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
             channel_id=channel_id,
             original_time=message.date or datetime.now()
         )
-        logger.info(f"? Scheduled broadcast for channel post {message.message_id}")
+        logger.info(f"Difusion programada para la publicacion del canal {message.message_id}")
     else:
-        logger.warning("Broadcast manager not initialized!")
+        logger.warning("Gestor de broadcast no inicializado!")
 
 
 async def handle_private_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -412,9 +430,8 @@ async def handle_private_message(update: Update, context: ContextTypes.DEFAULT_T
     logger.info(f"Query from user {user.id} (@{user.username}): {user_text[:100]}...")
     
     # Send temporary "processing" message
-    processing_msg = await update.message.reply_markdown(
-        "?? Processing your request...\n\n"
-        "_Analyzing recent channel messages to provide the best answer._"
+    processing_msg = await update.message.reply_markdown_v2(
+        escape_markdown("Procesando tu solicitud...\n\n_Analizando mensajes recientes del canal para darte la mejor respuesta._")
     )
     
     try:
@@ -422,7 +439,7 @@ async def handle_private_message(update: Update, context: ContextTypes.DEFAULT_T
         context_str = get_context_for_query()
         
         # Log context for debugging
-        logger.info(f"?? Context preview: {context_str[:200]}..." if len(context_str) > 200 else f"?? Context: {context_str}")
+        logger.info(f"Context preview: {context_str[:200]}..." if len(context_str) > 200 else f"Context: {context_str}")
         
         # Create a Future for the LLM result
         loop = asyncio.get_running_loop()
@@ -443,7 +460,7 @@ async def handle_private_message(update: Update, context: ContextTypes.DEFAULT_T
         
         if not llm_response.success:
             await processing_msg.edit_text(
-                f"?? Sorry, I encountered an error processing your request.\n\n"
+                f"Lo siento, encontre un error procesando tu solicitud.\n\n"
                 f"Error: {llm_response.error_message}"
             )
             return
@@ -458,12 +475,12 @@ async def handle_private_message(update: Update, context: ContextTypes.DEFAULT_T
         response_text = llm_response.content
         
         # Add prompt for feedback
-        response_with_feedback = f"{response_text}\n\n---\n_Did this answer your question?_"
+        response_with_feedback = f"{response_text}\n\n---\n_Ha respondido esto a tu pregunta?_"
         
         keyboard = create_satisfaction_keyboard()
         
-        bot_message = await update.message.reply_markdown(
-            response_with_feedback,
+        bot_message = await update.message.reply_markdown_v2(
+            escape_markdown(response_with_feedback),
             reply_markup=keyboard
         )
         
@@ -485,17 +502,17 @@ async def handle_private_message(update: Update, context: ContextTypes.DEFAULT_T
     except asyncio.TimeoutError:
         try:
             await processing_msg.edit_text(
-                "?? The model took too long to respond. Please try again later."
+                "El modelo tarda demasiado en responder. Por favor, intentalo nuevamente mas tarde."
             )
         except Exception:
             pass
-    
+
     except Exception as e:
         logger.error(f"Error handling message: {e}", exc_info=True)
         try:
             await processing_msg.edit_text(
-                f"?? An error occurred while processing your request.\n\n"
-                f"Please try again or contact the channel administrator."
+                f"Ocurrio un error mientras se procesaba tu solicitud.\n\n"
+                f"Por favor, intantalo de nuevo o contacta al administrador del canal."
             )
         except Exception:
             pass
@@ -531,7 +548,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         # Remove the keyboard and update the message
         try:
             await message.edit_text(
-                message.text + "\n\n? _Thank you for your feedback!_",
+                message.text + "\n\n _Thank you for your feedback!_",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[]])  # Remove keyboard
             )
@@ -551,7 +568,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         # Update message to show escalation
         try:
             await message.edit_text(
-                message.text + "\n\n?? _Your query has been escalated to the owner._",
+                message.text + "\n\n _Your query has been escalated to the owner._",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[]])  # Remove keyboard
             )
@@ -578,12 +595,12 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
 # ---------------------------
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     """Handle errors in the telegram bot."""
-    logger.error(f"Exception while handling an update: {context.error}", exc_info=context.error)
+    logger.error(f"Excepcion mientras se manejaba una actualizacion: {context.error}", exc_info=context.error)
     
     if isinstance(update, Update) and update.message:
         try:
             await update.message.reply_text(
-                "?? An unexpected error occurred. Please try again later."
+                "Ocurrio un error inesperado. Por favor, intentalo de nuevo mas tarde."
             )
         except Exception:
             pass
@@ -629,11 +646,11 @@ async def post_init(application):
     loop = asyncio.get_running_loop()
     loop.create_task(llm_worker())
     
-    logger.info("? Bot initialized successfully")
-    logger.info(f"   - Broadcast delay: {config.broadcast.delay_hours} hours")
-    logger.info(f"   - Context window: {config.context.context_hours} hours")
-    logger.info(f"   - Active subscribers: {broadcast_manager.get_subscriber_count()}")
-    logger.info(f"   - Stored channel messages: {channel_context_manager.get_message_count()}")
+    logger.info("Bot inicializado correctamente")
+    logger.info(f"   - Retraso de broadcast: {config.broadcast.delay_hours} horas")
+    logger.info(f"   - Ventana de contexto: {config.context.context_hours} horas")
+    logger.info(f"   - Suscriptores activos: {broadcast_manager.get_subscriber_count()}")
+    logger.info(f"   - Mensajes del canal almacenados: {channel_context_manager.get_message_count()}")
 
 
 async def post_shutdown(application):
@@ -689,7 +706,7 @@ def main():
     # Add error handler
     application.add_error_handler(error_handler)
     
-    logger.info("?? Starting bot...")
+    logger.info("**Starting bot...**")
     logger.info(f"   - Channel: {config.telegram.channel_id}")
     logger.info(f"   - Owner: {config.telegram.owner_username}")
     
