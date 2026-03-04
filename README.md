@@ -14,7 +14,8 @@ A sophisticated Telegram bot system designed to manage channel communications wi
   
 ### System Architecture  
   
-<img width="1077" height="451" alt="image" src="https://github.com/user-attachments/assets/33b84579-0cb3-4dc0-9130-9a7ef19ae8f6" />
+<img width="1101" height="455" alt="image" src="https://github.com/user-attachments/assets/c599a47b-a08c-4606-8701-a88c92b49543" />
+
   
   
 ### Features  
