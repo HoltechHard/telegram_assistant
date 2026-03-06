@@ -48,48 +48,53 @@ Provide to me the step by step in order to can realize this functionality
 Now is necessary make some correction. In the interaction flow between the user (not owner and not bot) and the bot, i remember tat we have the next flux of interaction to generate the replies:
 
 User: "What was announced yesterday?"
-  ?
+    	 |
+	 v
 Bot: [Processes with channel context]
-  ?
+  	 |
+	 v
 Bot: "Based on the channel announcement, the meeting was..."
-  ?
+	  |
+	  v
 [Shows YES/NO buttons]
-  ?
-User clicks YES ? ? Marked as resolved
-User clicks NO  ? ?? Escalated to owner
+	  |
+	  v
+User clicks YES  -->  Marked as resolved
+User clicks NO  --> Escalated to owner
 
 It is supossed that the bot will process the answer according to the channel context. Is supossed that the context collection is obtained in the next logic:
 
-Channel ? Fetch Messages (24h) ? Cache ? LLM Context
-                                    ?
+Channel --> Fetch Messages (24h)  -->  Cache -->  LLM Context
+                                    |
+	 			    v
                             TTL: 5 minutes
 
 So, now i submit into test the system. The owner send the next 2 messages to the telegram channel (information related with the current price of the gold):
 
 ---- channel messages ------
 
-[3/3/2026 11:59 AM] UPN CHANNEL: El precio del oro experimenta fluctuaciones este 3 de marzo de 2026, manteni?ndose por encima de los 5.300 d?lares por onza en el mercado internacional. Tras un repunte reciente impulsado por tensiones geopol?ticas en Oriente Medio (incluyendo acciones de EE.UU. e Israel contra Ir?n), el oro spot cotiza alrededor de 5.310-5.330 USD/onza, con ligeras correcciones por un d?lar m?s fuerte y mayores rendimientos de bonos.
-[3/3/2026 3:48 PM] UPN CHANNEL: El metal precioso super? los US$ 5.400 por onza ante la intensificaci?n del conflicto entre Ir?n, Estados Unidos e Israel. La volatilidad geopol?tica y el riesgo sobre las rutas de suministro impulsan la demanda por activos refugio.
-El precio del oro alcanz? este lunes su nivel m?s alto en un mes, extendiendo el rally iniciado la semana pasada en medio de la escalada del conflicto en Medio Oriente. El metal lleg? a subir hasta 2,9%, superando los US$ 5.400 por onza, antes de moderar parte de sus ganancias con la apertura de los mercados en Estados Unidos.
+[3/3/2026 11:59 AM] UPN CHANNEL: El precio del oro experimenta fluctuaciones este 3 de marzo de 2026, manteniendose por encima de los 5.300 dolares por onza en el mercado internacional. Tras un repunte reciente impulsado por tensiones geopol?ticas en Oriente Medio (incluyendo acciones de EE.UU. e Israel contra Iran), el oro spot cotiza alrededor de 5.310-5.330 USD/onza, con ligeras correcciones por un dolar mas fuerte y mayores rendimientos de bonos.
+[3/3/2026 3:48 PM] UPN CHANNEL: El metal precioso supera los US$ 5.400 por onza ante la intensificacion del conflicto entre Iran, Estados Unidos e Israel. La volatilidad geopolitica y el riesgo sobre las rutas de suministro impulsan la demanda por activos refugio.
+El precio del oro alcanza este lunes su nivel mas alto en un mes, extendiendo el rally iniciado la semana pasada en medio de la escalada del conflicto en Medio Oriente. El metal llega a subir hasta 2,9%, superando los US$ 5.400 por onza, antes de moderar parte de sus ganancias con la apertura de los mercados en Estados Unidos.
 
 And then, the users make the next interactions with the bot (questions):
 
 #### TEST 01:
 
 Holger:
-Porque motivo el precio de la onza de oro est? subiendo?
+Porque motivo el precio de la onza de oro esta subiendo?
 
 UPN Assistant:
 No hay mensajes recientes en el canal que hablen sobre el precio del oro actualmente, pero puedo explicarte las razones generales por las que la onza de oro suele subir de precio:
 
 Factores principales que impulsan el alza del oro
 
-1. Incertidumbre econ?mica y geopol?tica
+1. Incertidumbre economica y geopolitica
 
 - El oro es considerado un "refugio seguro" (activo safe haven)
-- En per?odos de tensi?n geopol?tica, guerras o inestabilidad pol?tica, los inversores buscan proteger su capital en metales preciosos
+- En periodos de tension geopolitica, guerras o inestabilidad politica, los inversores buscan proteger su capital en metales preciosos
 
-2. Expectativas sobre tasas de inter?s
+2. Expectativas sobre tasas de interes
 
 - Cuando los bancos centrales (como la Reserva Federal de EE.UU.) reducen tasas o se esper
 
@@ -105,9 +110,9 @@ Holger:
 Cual es el precio actual de la onza de oro?
 
 UPN Assistant:
-No tengo informaci?n sobre el precio actual de la onza de oro en los mensajes recientes del canal.
+No tengo informacion sobre el precio actual de la onza de oro en los mensajes recientes del canal.
 
-Como los precios del oro fluct?an constantemente
+Como los precios del oro fluctuan constantemente
 
 ---
 
@@ -139,3 +144,50 @@ take in account the project msg_assistant main folder of the structure of my pro
 
 4) take in account the description of modifications in the structure of the project, and move the files in the hierarchy structure of files mentioned before and indeed, if in the code is necessary make some modifications in the import or in the call of the classes or objects, also make all these necessary refactorization in order to the system maintains the functionality as the original system.
 5) Don't change functionalities of the system. Just make strictly the modifications defined above in the description of prompt and explain me step by step what you are doing in order to achieve this goal
+
+
+### 4TH ROUND OF SYSTEM PROMPTING  
+
+Consider the last version of this telegram assistant project. And now, i want to you make some updates respect the queue implemented to manage the order of user questions:
+
+- consider this draft idea of architecture to add to this system:
+
+Telegram Updates
+        ?
+Async Handler (fast)
+        ?
+Admission Control (queue limit)
+        ?
+Priority Queue
+        ?
+Worker Pool (N workers)
+        ?
+LLM Execution
+        ?
+Response Sender
+
+The idea is help to telegram bot can scale the use to attent a high number of users in good and efficient way. To this, we will implement a redis queue under this logic:
+
+1) the user make the question, and under this question, the bot send a automatic question in the chat with 4 buttons options which the user need press to categorize the type of question before proceed the processing.
+   bot question: Qual categoria de pregunta tienes?
+   telegram buttons:
+
+- Notas
+- Evaluaciones
+- Tareas
+- Otros
+
+2) After the user press some button, automatically, the system will store this question in some json file (question_id: automatic field, question_description: the formulated question by the user, category: the button pressed category, status: true if is already attend or false if it is not attent by the telegram bot yet) and in redis database store in efficient way in order to can use the redis database to manage a priority queue. Make some optimizations in order to can make a efficient attention of this queue and if it is possible with parallelization and concurrency. Also for this consider that my server have these capabilities:
+
+- 1 vCPU core
+- 4 GB RAM
+- 50 GB NVMe disk space
+- 4 TB bandwidth
+
+3) In the priority queue, manage the priority according to 2 criteria:
+
+- 1st one: category of question (according to the field of category, notas =1, evaluaciones = 2, tareas = 3, otros = 4), smallest score is higher level of priority
+- 2nd one: if have draw, apply FIFO (first comes, first which is attent)
+
+4) Taking in account the capabilities of the server and also the limitation of LLM of maximum 10 RPM (requests per minute of limit via the API), adopt efficient modifications in the project in order to maximize the efficiency of computer resources and consider that i want scale in number of users and message requests, so it's good idea fit the system to can  make the best use as possible of the computational resources of the server. The idea is build a system with no so high delay in the process of answering messages
+5) provide to me the step by step solution to fix these functional requirements (the number of users not exceed of 50 and replies in concurrency maybe is less than 5 in spike moments)
