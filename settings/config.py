@@ -112,12 +112,52 @@ class ContextConfig:
 
 
 @dataclass
+class RedisConfig:
+    """Redis connection configuration settings."""
+    host: str
+    port: int
+    db: int
+    username: str
+    password: str
+    
+    @classmethod
+    def from_env(cls) -> "RedisConfig":
+        """Load Redis configuration from environment variables."""
+        return cls(
+            host=os.getenv("REDIS_HOST"),
+            port=int(os.getenv("REDIS_PORT")),
+            db=int(os.getenv("REDIS_DB")),
+            username=os.getenv("REDIS_USERNAME"),
+            password=os.getenv("REDIS_PASSWORD")
+        )
+
+
+@dataclass
+class QueueConfig:
+    """Priority queue configuration settings."""
+    max_queue_size: int
+    num_workers: int
+    max_rpm: int
+    
+    @classmethod
+    def from_env(cls) -> "QueueConfig":
+        """Load queue configuration from environment variables."""
+        return cls(
+            max_queue_size=int(os.getenv("QUEUE_MAX_SIZE")),
+            num_workers=int(os.getenv("QUEUE_NUM_WORKERS")),
+            max_rpm=int(os.getenv("QUEUE_MAX_RPM"))
+        )
+
+
+@dataclass
 class AppConfig:
     """Main application configuration container."""
     telegram: TelegramConfig
     llm: LLMConfig
     broadcast: BroadcastConfig
     context: ContextConfig
+    redis: RedisConfig
+    queue: QueueConfig
     log_level: str
     
     @classmethod
@@ -128,6 +168,8 @@ class AppConfig:
             llm=LLMConfig.from_env(),
             broadcast=BroadcastConfig.from_env(),
             context=ContextConfig.from_env(),
+            redis=RedisConfig.from_env(),
+            queue=QueueConfig.from_env(),
             log_level=os.getenv("LOG_LEVEL")
         )
 
