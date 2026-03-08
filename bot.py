@@ -74,6 +74,28 @@ def escape_markdown(text: str) -> str:
     return result
 
 
+def prepare_llm_response(text: str) -> str:
+    """
+    Prepare an LLM response for Telegram MarkdownV2.
+    Converts **bold** markers to MarkdownV2 *bold*, then escapes all
+    other special characters. Must be done in two passes so the bold
+    markers are not escaped along with the rest.
+    """
+    import re
+    result = ""
+    # Split on **...** patterns so we can handle them separately
+    parts = re.split(r'\*\*(.*?)\*\*', text)
+    # parts alternates: plain, bold, plain, bold, ...
+    for i, part in enumerate(parts):
+        if i % 2 == 0:
+            # Regular text: escape all special chars for MarkdownV2
+            result += escape_markdown(part)
+        else:
+            # Bold text: escape the content, then wrap in *...*
+            result += f"*{escape_markdown(part)}*"
+    return result
+
+
 # ---------------------------
 # Global Managers
 # ---------------------------
@@ -237,24 +259,27 @@ async def queue_worker(worker_id: int):
                 response_text = llm_response.content
                 response_with_feedback = (
                     f"{response_text}\n\n---\n"
-                    "_Ha respondido esto a tu pregunta?_"
+                    "Ha respondido esto a tu pregunta?"
                 )
 
                 keyboard = create_satisfaction_keyboard()
 
                 bot_message = await _shared_bot.send_message(
                     chat_id=chat_id,
-                    text=escape_markdown(response_with_feedback),
+                    text=prepare_llm_response(response_with_feedback),
                     parse_mode="MarkdownV2",
                     reply_markup=keyboard
                 )
 
                 # Register for escalation tracking
                 if escalation_manager:
+                    # Look up subscriber to get username/first_name
+                    sub_mgr = get_subscriber_manager()
+                    subscriber = sub_mgr.get_subscriber(user_id)
                     await escalation_manager.register_query(
                         user_id=user_id,
-                        username=None,
-                        first_name=None,
+                        username=subscriber.username if subscriber else None,
+                        first_name=subscriber.first_name if subscriber else None,
                         question=question_text,
                         bot_response=response_text,
                         message_id=bot_message.message_id
@@ -449,7 +474,7 @@ async def queue_command(
             escape_markdown(
                 f"**Estado de la Cola**\n\n"
                 f"Hay **{q_size}** pregunta(s) en cola.\n\n"
-                "_Se procesan segun categoria y orden de llegada._"
+                "Las preguntas se procesan segun categoria y orden de llegada."
             )
         )
 
@@ -605,7 +630,7 @@ async def handle_private_message(
     await update.message.reply_markdown_v2(
         escape_markdown(
             "Qual categoria de pregunta tienes?\n\n"
-            "_Selecciona una categoria para procesar tu pregunta:_"
+            "Selecciona una categoria para procesar tu pregunta:"
         ),
         reply_markup=keyboard
     )
@@ -732,7 +757,7 @@ async def _handle_satisfaction_feedback(
     if satisfied:
         try:
             await message.edit_text(
-                message.text + "\n\n _Gracias por tu comentario!_",
+                message.text + "\n\n Gracias por tu comentario!",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[]])
             )
@@ -746,7 +771,7 @@ async def _handle_satisfaction_feedback(
         user = query.from_user
         try:
             await message.edit_text(
-                message.text + "\n\n _Escalada al dueno._",
+                message.text + "\n\n Escalada al docente.",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[]])
             )
