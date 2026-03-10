@@ -225,4 +225,51 @@ Bot Response ───▶ YES/NO Buttons
    After delay, bot sends notification to:
    - All tracked subscribers
    - Excludes: Owner + Bot itself
-   
+
+10) Redis priority Queue management 
+
+User Message
+    |
+    v
+Async Handler (fast) --> "Qual categoria de pregunta tienes?"
+    |                          |
+    v                     4 buttons
+Store question              (Notas, Evaluaciones, Tareas, Otros)
+in user_data                   |
+                               v
+                    Admission Control (max 100 in queue)
+                               |
+                               v
+                    Redis Priority Queue (ZSET)
+                    + JSON file persistence
+                               |
+                               v
+                    Worker Pool (2 async workers)
+                    + Rate Limiter (10 RPM)
+                               |
+                               v
+                         LLM Execution
+                               |
+                               v
+                    Response Sender
+                    (reply + satisfaction buttons)
+
+
+Redis database in RedisInsight
+
+link: 
+http://localhost:5540 (in local computer)
+
+conection url:
+redis://default:holtech_torch777@redis:6379/1 (based on docker container)
+
+11) put in production <in local windows>
+
+$ docker inspect redis_db
+
+network name:
+> redis_queue_init_default 
+
+after that, make connection between application and redis
+
+$ docker compose up -d --build
