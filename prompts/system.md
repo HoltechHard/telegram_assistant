@@ -145,25 +145,30 @@ take in account the project msg_assistant main folder of the structure of my pro
 4) take in account the description of modifications in the structure of the project, and move the files in the hierarchy structure of files mentioned before and indeed, if in the code is necessary make some modifications in the import or in the call of the classes or objects, also make all these necessary refactorization in order to the system maintains the functionality as the original system.
 5) Don't change functionalities of the system. Just make strictly the modifications defined above in the description of prompt and explain me step by step what you are doing in order to achieve this goal
 
-
-### 4TH ROUND OF SYSTEM PROMPTING  
+### 4TH ROUND OF SYSTEM PROMPTING: adding functionalities
 
 Consider the last version of this telegram assistant project. And now, i want to you make some updates respect the queue implemented to manage the order of user questions:
 
 - consider this draft idea of architecture to add to this system:
 
 Telegram Updates
-        ?
+        |
+        v
 Async Handler (fast)
-        ?
+        |
+        v
 Admission Control (queue limit)
-        ?
+        |
+        v
 Priority Queue
-        ?
+        |
+        v
 Worker Pool (N workers)
-        ?
+        |
+        v
 LLM Execution
-        ?
+        |
+        v
 Response Sender
 
 The idea is help to telegram bot can scale the use to attent a high number of users in good and efficient way. To this, we will implement a redis queue under this logic:
@@ -189,5 +194,5 @@ The idea is help to telegram bot can scale the use to attent a high number of us
 - 1st one: category of question (according to the field of category, notas =1, evaluaciones = 2, tareas = 3, otros = 4), smallest score is higher level of priority
 - 2nd one: if have draw, apply FIFO (first comes, first which is attent)
 
-4) Taking in account the capabilities of the server and also the limitation of LLM of maximum 10 RPM (requests per minute of limit via the API), adopt efficient modifications in the project in order to maximize the efficiency of computer resources and consider that i want scale in number of users and message requests, so it's good idea fit the system to can  make the best use as possible of the computational resources of the server. The idea is build a system with no so high delay in the process of answering messages
+4) Taking in account the capabilities of the server and also the limitation of LLM API of maximum 10 RPM (requests per minute of limit via the API), adopt efficient modifications in the project in order to maximize the efficiency of computer resources and consider that i want scale in number of users and message requests, so it's good idea fit the system to can  make the best use as possible of the computational resources of the server. The idea is build a system with no so high delay in the process of answering messages
 5) provide to me the step by step solution to fix these functional requirements (the number of users not exceed of 50 and replies in concurrency maybe is less than 5 in spike moments)
