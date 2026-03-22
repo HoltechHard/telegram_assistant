@@ -158,6 +158,7 @@ class AppConfig:
     context: ContextConfig
     redis: RedisConfig
     queue: QueueConfig
+    media_folder: str
     log_level: str
     
     @classmethod
@@ -170,6 +171,7 @@ class AppConfig:
             context=ContextConfig.from_env(),
             redis=RedisConfig.from_env(),
             queue=QueueConfig.from_env(),
+            media_folder=os.getenv("MEDIA_FOLDER", "multimedia"),
             log_level=os.getenv("LOG_LEVEL")
         )
 
