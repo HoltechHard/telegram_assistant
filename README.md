@@ -48,7 +48,11 @@ A sophisticated Telegram bot system designed to manage channel communications wi
 ### System Interaction  
     
 <img width="422" height="447" alt="image" src="https://github.com/user-attachments/assets/1d9a91e8-71bb-48c3-abbe-f2cec313546a" />  
-  
    
-  
+### Multimodality Analysis  
+      
+<img width="1048" height="387" alt="image" src="https://github.com/user-attachments/assets/63d99159-c2fa-4e58-97bc-0b645f305db2" />   
+   
+   
+    
    
