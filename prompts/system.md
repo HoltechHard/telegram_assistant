@@ -196,3 +196,43 @@ The idea is help to telegram bot can scale the use to attent a high number of us
 
 4) Taking in account the capabilities of the server and also the limitation of LLM API of maximum 10 RPM (requests per minute of limit via the API), adopt efficient modifications in the project in order to maximize the efficiency of computer resources and consider that i want scale in number of users and message requests, so it's good idea fit the system to can  make the best use as possible of the computational resources of the server. The idea is build a system with no so high delay in the process of answering messages
 5) provide to me the step by step solution to fix these functional requirements (the number of users not exceed of 50 and replies in concurrency maybe is less than 5 in spike moments)
+
+
+### 5TH ROUND OF SYSTEM PROMPTING: ADDING MULTIMODAL FEATURES  
+
+
+Currently, my system can process the text publications in the channel and store in the channel_messages.json for future processing of RAG in order to can have the capacity to answer questions.
+
+However, now i want add a new functionality! In parallel (it means, completely independently from this currently project) i developed one system which can have the capacity of receive a multimedia content (1 image + 1 text together in the same post) in telegram channel, and make the ingestion, taking the image, storing in the image in some folder called multimedia and sending this to AI model kimi-k2.5 via API to make the transcript from this image and concatenating this text result with the text caption part of the multimodal post. The tecnical description of how this system was developed you can see in the file in this root here in this project:
+@multimodal_requirements.md
+Together with the documentation of this file multimodal_requirements.md, i will add the mentioned files in the documentation in order to you can have the source code guide of how it was implemented.
+
+[here put the sequence of files corresponded of source code of project telegram_post_extraction]
+
+
+- Now, you can analyze very deep this small independent project and now, adapt the same functionality to my project here msg_assistant. I want you accoplate this functionality, but respecting the structure OOP of this project and how it is organized need to maintain it homogeneously.
+- Consider add some module in the project called ingest and inside manage all the part of ingest services corresponded of donwload the image and process the image, send to AI to obtain the transcript and concatenate it with the original caption text like was done also in the code provided above
+- when the AI transcript of the image, together with the caption text was concatenated, you need to store this text result exactly like you do for the text publicacions in the file channel_messages.json
+- the llm_client.py file continue managing the logic of prompt manager to answer the questions of the users, it's probable that it will not suffer no many changes. Take in account that we use the same model and the same LLM_API_KEY which we use in the independently telegram multimodal ingestor and in this project of msg_assistant
+- In the project mentioned above, they manage the next .env variables:
+
+API_ID =
+
+API_HASH =
+
+CHANNEL_USERNAME =
+
+SESSION_NAME =
+
+MEDIA_FOLDER =
+
+LLM_API_KEY =
+
+LLM_URL =
+
+for us, when you will integrate the functionalities, consider that LLM_API_KEY, CHANNEL_USERNAME and LLM_URL are exactly the same, thus, you can reuse what we already implement here in our project in settings/config.py.
+
+However API_ID, API_HASH  and SESSION_NAME are important variables for the TelegramClient, and you can manage it as class TelegramMultimodalListener in the settings/config.py if you consider conveniently when need extract the .env values and put in the class. The MEDIA_FOLDER you can manage just as simple global variable which contains the new folder "multimedia" (place which will stored all the images uploaded in the telegram channel)
+
+- implement the functionalities with minimal changes in the software structure. Remember that modularization, and division of functionalities taking in account the good practices of OOP are priority. We cant maintain all the main functionalities of the system, we just want add a new functionality of multimodality processing of telegram messages. Probable some functionalities you will need add in the module handlers, like for example the message_handler.py which you can rename in more appropriate way as multimodal_msg_handler.py or something similar to this.
+- read with attention the documentation in @beautifulMentionfile and take in account all my specifications in order to add this functionality to my system. I guess that not any modification is necessary do in queue_manager or in the rag processing. Provide to me the plan, the step by step execution, diagrams of interaction between components and documentation of the solution provided in some markdown file.
