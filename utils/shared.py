@@ -17,6 +17,10 @@ rate_limiter = None
 media_downloader = None
 multimodal_processor = None
 
+# Speech Ingestion Managers
+speech_downloader = None
+audio_processor = None
+
 # Shared bot reference (set in post_init, used by workers)
 _shared_bot: Optional[Bot] = None
 

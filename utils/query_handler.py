@@ -8,7 +8,7 @@ from managers.category_manager import (
     get_category_display_name
 )
 from managers.escalation_manager import parse_satisfaction_callback
-from queue_manager.priority_queue import generate_question_id
+from queue_qa.priority_queue import generate_question_id
 from utils import shared
 from utils.helper_functionals import get_context_for_query
 
