@@ -35,16 +35,20 @@ from managers.subscriber_manager import init_subscriber_manager
 from managers.category_manager import (
     CATEGORY_CALLBACK_PREFIX
 )
-from queue_manager.redis_client import get_redis, close_redis
-from queue_manager.priority_queue import PriorityQueueManager
-from queue_manager.question_store import QuestionStore
-from queue_manager.rate_limiter import RateLimiter
+from queue_qa.redis_client import get_redis, close_redis
+from queue_qa.priority_queue import PriorityQueueManager
+from queue_qa.question_store import QuestionStore
+from queue_qa.rate_limiter import RateLimiter
 
 # Multimodal Ingestion Imports
-from ingest.media_downloader import MediaDownloader
-from ingest.ai_client import AIClient
-from ingest.ai_image_transcriber import AIImageTranscriber
-from ingest.multimodal_processor import MultimodalProcessor
+from ingest.vision.media_downloader import MediaDownloader
+from ingest.vision.ai_client import AIClient
+from ingest.vision.ai_image_transcriber import AIImageTranscriber
+from ingest.vision.multimodal_processor import MultimodalProcessor
+
+# Speech Ingestion Imports
+from ingest.speech.media_downloader import SpeechMediaDownloader
+from ingest.speech.audio_processor import AudioProcessor
 
 # Utils Package Imports
 from utils import shared
@@ -95,18 +99,39 @@ async def post_init(application):
     init_subscriber_manager(storage_path)
 
     # Initialize channel context manager
+    logger.warning("?? post_init: Initializing channel context manager...")
     init_channel_context_manager()
     shared.channel_context_manager = get_channel_context_manager()
+    logger.warning(f"? Channel context manager initialized")
 
     # Initialize other managers
+    logger.warning("?? post_init: Initializing managers...")
     shared.broadcast_manager = BroadcastManager(bot)
     shared.escalation_manager = EscalationManager(bot)
     shared.llm_client = LLMClient()
+    logger.warning(f"? Managers initialized")
 
     # Initialize multimodal services
+    logger.warning("?? post_init: Initializing vision/multimodal services...")
     shared.media_downloader = MediaDownloader(media_folder=config.media_folder)
+    logger.warning(f"? Media downloader initialized: {config.media_folder}")
+    
+    # Initialize speech services
+    logger.warning("?? post_init: Initializing speech/audio services...")
+    logger.warning(f"   - Speech folder config: {config.speech_folder}")
+    shared.speech_downloader = SpeechMediaDownloader()
+    logger.warning(f"? Speech media downloader initialized")
+    
+    logger.warning(f"   - Creating AudioProcessor...")
+    shared.audio_processor = AudioProcessor()
+    logger.warning(f"? AudioProcessor created")
+    
+    logger.warning(f"   - Starting AudioProcessor workers...")
+    await shared.audio_processor.start()
+    logger.warning(f"? AudioProcessor workers started")
     
     # Reuse LLM config for multimodal AI
+    logger.warning("?? post_init: Initializing multimodal AI...")
     ai_client = AIClient(
         api_key=config.llm.api_key,
         base_url=config.llm.base_url,
@@ -114,20 +139,24 @@ async def post_init(application):
     )
     transcriber = AIImageTranscriber(ai_client)
     shared.multimodal_processor = MultimodalProcessor(transcriber)
+    logger.warning(f"? Multimodal processor initialized")
 
     shared.broadcast_manager.set_excluded_ids(
         owner_id=None, bot_id=shared.bot_user_id
     )
     await shared.broadcast_manager.start()
+    logger.warning(f"? Broadcast manager started")
 
     # ========== REDIS & QUEUE INITIALIZATION ==========
     try:
+        logger.warning("?? post_init: Connecting to Redis...")
         get_redis()
-        logger.info("Redis connection established")
+        logger.warning("? Redis connection established")
 
         shared.priority_queue = PriorityQueueManager()
         shared.question_store = QuestionStore()
         shared.rate_limiter = RateLimiter(max_rpm=config.queue.max_rpm)
+        logger.warning(f"? Queue managers initialized")
 
         # Start worker pool
         num_workers = config.queue.num_workers
@@ -171,6 +200,9 @@ async def post_shutdown(application):
     """Cleanup on shutdown."""
     if shared.broadcast_manager:
         await shared.broadcast_manager.stop()
+        
+    if shared.audio_processor:
+        await shared.audio_processor.stop()
 
     for task in shared._worker_tasks:
         task.cancel()
@@ -208,18 +240,22 @@ def main():
     application.add_handler(CommandHandler("queue", queue_command))
     application.add_handler(CommandHandler("context", context_command))
 
-    # Channel post handler
+    # Channel post handler - handles TEXT, PHOTO, VOICE, AUDIO, etc.
+    logger.warning("?? Registering channel post handler...")
     application.add_handler(
         MessageHandler(filters.ChatType.CHANNEL, handle_channel_post)
     )
+    logger.warning("? Channel post handler registered (all message types)")
 
-    # Private messages - triggers category selection
+    # Private messages handler - TEXT, PHOTO, VOICE, AUDIO (with category selection after audio transcription)
+    logger.warning("?? Registering private message handlers...")
     application.add_handler(
         MessageHandler(
-            (filters.TEXT | filters.PHOTO) & ~filters.COMMAND & filters.ChatType.PRIVATE,
+            (filters.TEXT | filters.PHOTO | filters.VOICE | filters.AUDIO) & ~filters.COMMAND & filters.ChatType.PRIVATE,
             handle_private_message
         )
     )
+    logger.warning("? Private message handler registered (TEXT | PHOTO | VOICE | AUDIO)")
 
     # Callback query handler (category + satisfaction buttons)
     application.add_handler(CallbackQueryHandler(handle_callback_query))
@@ -227,10 +263,14 @@ def main():
     # Error handler
     application.add_error_handler(error_handler)
 
-    logger.info("**Starting bot...**")
-    logger.info(f"   - Channel: {config.telegram.channel_id}")
-    logger.info(f"   - Owner: {config.telegram.owner_username}")
-
+    logger.warning("=" * 60)
+    logger.warning("**STARTING BOT...**")
+    logger.warning("=" * 60)
+    logger.warning(f"   - Channel: {config.telegram.channel_id}")
+    logger.warning(f"   - Owner: {config.telegram.owner_username}")
+    logger.warning(f"   - All handlers registered successfully")
+    logger.warning("=" * 60)
+    
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
