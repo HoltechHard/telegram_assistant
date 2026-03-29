@@ -150,6 +150,33 @@ class QueueConfig:
 
 
 @dataclass
+class SpeechConfig:
+    """Speech system configuration settings."""
+    function_id: str
+    whisper_server: str
+    language: str
+    api_key: str
+    redis_db: int
+    redis_queue: str
+    max_workers: int
+    riva_local_uri: str
+    script_path: str
+    
+    @classmethod
+    def from_env(cls) -> "SpeechConfig":
+        return cls(
+            function_id=os.getenv("WHISPER_FUNCTION_ID"),
+            whisper_server=os.getenv("WHISPER_SERVER"),
+            language=os.getenv("LANGUAGE_CODE"),
+            api_key=os.getenv("SPEECH_API_KEY"),
+            redis_db=int(os.getenv("REDIS_SPEECH_DB")),
+            redis_queue=os.getenv("REDIS_SPEECH_QUEUE"),
+            max_workers=int(os.getenv("MAX_SPEECH_WORKERS")),
+            riva_local_uri=os.getenv("RIVA_LOCAL_URI"),
+            script_path=os.getenv("SCRIPT_PATH")
+        )
+
+@dataclass
 class AppConfig:
     """Main application configuration container."""
     telegram: TelegramConfig
@@ -158,7 +185,9 @@ class AppConfig:
     context: ContextConfig
     redis: RedisConfig
     queue: QueueConfig
+    speech: SpeechConfig
     media_folder: str
+    speech_folder: str
     log_level: str
     
     @classmethod
@@ -171,7 +200,9 @@ class AppConfig:
             context=ContextConfig.from_env(),
             redis=RedisConfig.from_env(),
             queue=QueueConfig.from_env(),
-            media_folder=os.getenv("MEDIA_FOLDER", "multimedia"),
+            speech=SpeechConfig.from_env(),
+            media_folder=os.getenv("MEDIA_FOLDER"),
+            speech_folder=os.getenv("SPEECH_FOLDER"),
             log_level=os.getenv("LOG_LEVEL")
         )
 
