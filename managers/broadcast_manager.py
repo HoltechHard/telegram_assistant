@@ -41,7 +41,9 @@ class ScheduledBroadcast:
     channel_id: str
     scheduled_time: datetime
     original_time: datetime
-    photo_file_id: Optional[str] = None  # Original photo reference
+    photo_file_id: Optional[str] = None  # Photo media reference for image posts
+    voice_file_id: Optional[str] = None  # Voice media reference for voice posts
+    audio_file_id: Optional[str] = None  # Audio media reference for audio posts
     completed: bool = False
     completed_at: Optional[datetime] = None
     sent_to: List[int] = field(default_factory=list)
@@ -257,7 +259,7 @@ class BroadcastManager:
         else:
             user_mention = f"User"
         
-        # Create the broadcast message
+        # Create the broadcast message payload
         greeting = (
             f"**{user_mention}, tienes un nuevo mensaje importante!**\n\n"
             f"**Mensaje del canal:**\n"
@@ -266,27 +268,53 @@ class BroadcastManager:
             f"\n\n---\n"
             f"_Esta es una notificacion automatica del canal._"
         )
-        
-        full_message = f"{greeting}{broadcast.message_text}{footer}"
-        
-        if broadcast.photo_file_id:
-            # Telegram caption limit is 1024 characters
+
+        content_text = broadcast.message_text or ""
+
+        full_message = f"{greeting}{content_text}{footer}"
+
+        # Select send method prioritizing voice/audio over photo, if present
+        if broadcast.voice_file_id:
+            # send voice with caption
             if len(full_message) > 1024:
                 full_message = full_message[:1021] + "..."
-                
-            # Send photo with caption
+
+            await self.bot.send_voice(
+                chat_id=user_id,
+                voice=broadcast.voice_file_id,
+                caption=full_message,
+                parse_mode="Markdown"
+            )
+
+        elif broadcast.audio_file_id:
+            # send audio with caption
+            if len(full_message) > 1024:
+                full_message = full_message[:1021] + "..."
+
+            await self.bot.send_audio(
+                chat_id=user_id,
+                audio=broadcast.audio_file_id,
+                caption=full_message,
+                parse_mode="Markdown"
+            )
+
+        elif broadcast.photo_file_id:
+            # send photo with caption
+            if len(full_message) > 1024:
+                full_message = full_message[:1021] + "..."
+
             await self.bot.send_photo(
                 chat_id=user_id,
                 photo=broadcast.photo_file_id,
                 caption=full_message,
                 parse_mode="Markdown"
             )
+
         else:
-            # Telegram message limit is 4096 characters
+            # send as text only
             if len(full_message) > 4096:
                 full_message = full_message[:4093] + "..."
-                
-            # Send text only
+
             await self.bot.send_message(
                 chat_id=user_id,
                 text=full_message,
@@ -300,7 +328,9 @@ class BroadcastManager:
         channel_id: str,
         original_time: Optional[datetime] = None,
         delay_hours: Optional[int] = None,
-        photo_file_id: Optional[str] = None
+        photo_file_id: Optional[str] = None,
+        voice_file_id: Optional[str] = None,
+        audio_file_id: Optional[str] = None
     ) -> ScheduledBroadcast:
         """
         Schedule a new broadcast message.
@@ -326,7 +356,9 @@ class BroadcastManager:
             channel_id=channel_id,
             scheduled_time=scheduled_time,
             original_time=original_time,
-            photo_file_id=photo_file_id
+            photo_file_id=photo_file_id,
+            voice_file_id=voice_file_id,
+            audio_file_id=audio_file_id
         )
         
         async with self._lock:
