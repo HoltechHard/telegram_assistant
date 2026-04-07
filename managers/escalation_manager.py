@@ -235,7 +235,9 @@ class EscalationManager:
         
         # Format user mention
         if query.username:
-            user_mention = f"@{query.username}"
+            username_text = query.username.lstrip("@")
+            escaped_username = username_text.replace("_", "\\_")
+            user_mention = f"@{escaped_username}"
         else:
             user_mention = query.first_name or f"User {query.user_id}"
         
