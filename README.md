@@ -1,7 +1,13 @@
 # Telegram Bot Assistant based on LLM + RAG and Escalation System  
 
-### Components
-
+### Description  
+  
+Multimodal vision processor and speech automatic recognition and transcription  
+with asynchronous workers managing QA (question-answering) tasks in scalable  
+multiple-concurrency services in telegram bots  
+  
+### Components  
+  
 - Kimi 2.5 LLM API  
 - Python backend  
 - Telegram bot: @holger_assistant_bot  
